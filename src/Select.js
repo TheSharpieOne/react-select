@@ -142,6 +142,8 @@ export type Props = {
   onMenuOpen: () => void,
   /* Handle the menu closing */
   onMenuClose: () => void,
+  /* Handle when the user has scrolled to the bottom on the menu */
+  onMenuScrollToBottom?: ({ inputValue: string }) => void,
   /* Array of options that populate the select menu */
   options: OptionsType,
   /* Number of options to jump in menu when page{up|down} keys are used */
@@ -620,6 +622,16 @@ export default class Select extends Component<Props, State> {
     event.stopPropagation();
     this.openAfterFocus = false;
     setTimeout(() => this.focusInput());
+  };
+
+  // ==============================
+  // Scroll Handlers
+  // ==============================
+
+  onBottomArrive = (event: SyntheticEvent<HTMLElement>) => {
+    if (this.props.onMenuScrollToBottom) {
+      this.props.onMenuScrollToBottom({ inputValue: this.props.inputValue });
+    }
   };
 
   // ==============================
@@ -1230,7 +1242,7 @@ export default class Select extends Component<Props, State> {
         menuPlacement={menuPlacement}
         scrollMenuIntoView={scrollMenuIntoView}
       >
-        <ScrollCaptor isEnabled={captureMenuScroll}>
+        <ScrollCaptor isEnabled={captureMenuScroll} onBottomArrive={this.onBottomArrive}>
           <MenuList
             {...commonProps}
             innerProps={{
