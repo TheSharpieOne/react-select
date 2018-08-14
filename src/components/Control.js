@@ -17,10 +17,10 @@ export type ControlProps = CommonProps &
   State & {
     /** Children to render. */
     children: Node,
+    innerRef: ElementRef<*>,
     /** The mouse down event and the innerRef to pass down to the controller element. */
     innerProps: {
       onMouseDown: (SyntheticMouseEvent<HTMLElement>) => void,
-      innerRef: ElementRef<*>,
     },
   };
 
@@ -51,17 +51,16 @@ export const css = ({ isDisabled, isFocused }: State) => ({
 });
 
 const Control = (props: ControlProps) => {
-  const { children, cx, getStyles, className, isDisabled, isFocused, innerProps } = props;
-  const { innerRef, ...rest } = innerProps;
+  const { children, cx, getStyles, className, isDisabled, isFocused, innerRef, innerProps } = props;
   return (
     <div
       ref={innerRef}
       className={cx(emotionCSS(getStyles('control', props)), {
         'control': true,
-        'control-is-disabled': isDisabled,
-        'control-is-focused': isFocused
+        'control--is-disabled': isDisabled,
+        'control--is-focused': isFocused
       }, className)}
-      {...rest}
+      {...innerProps}
     >
       {children}
     </div>

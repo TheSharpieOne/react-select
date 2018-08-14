@@ -1,5 +1,8 @@
 // @flow
-import type { ComponentType } from 'react';
+import {
+  type ComponentType,
+  type Element,
+} from 'react';
 import {
   type IndicatorContainerProps,
   type ContainerProps,
@@ -42,20 +45,25 @@ import Option, { type OptionProps } from './Option';
 import Placeholder, { type PlaceholderProps } from './Placeholder';
 import SingleValue, { type SingleValueProps } from './SingleValue';
 
+export type PlaceholderOrValue =
+  | Element<ComponentType<PlaceholderProps>>
+  | Element<ComponentType<SingleValueProps>>
+  | Array<Element<ComponentType<MultiValueProps>>>
+
 type IndicatorComponentType = ComponentType<IndicatorProps>;
 
 export type SelectComponents = {
-  ClearIndicator: IndicatorComponentType,
+  ClearIndicator: IndicatorComponentType | null,
   Control: ComponentType<ControlProps>,
-  DropdownIndicator: IndicatorComponentType,
+  DropdownIndicator: IndicatorComponentType | null,
   DownChevron: ComponentType<any>,
   CrossIcon: ComponentType<any>,
   Group: ComponentType<GroupProps>,
   GroupHeading: ComponentType<any>,
   IndicatorsContainer: ComponentType<IndicatorContainerProps>,
-  IndicatorSeparator: IndicatorComponentType,
+  IndicatorSeparator: IndicatorComponentType | null,
   Input: ComponentType<InputProps>,
-  LoadingIndicator: ComponentType<LoadingIconProps>,
+  LoadingIndicator: ComponentType<LoadingIconProps> | null,
   Menu: ComponentType<MenuProps>,
   MenuList: ComponentType<MenuListComponentProps>,
   MenuPortal: ComponentType<MenuPortalProps>,
