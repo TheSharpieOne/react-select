@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "classnames": "^2.2.4",
+    "lodash.debounce": "^4.0.8",
     "react-input-autosize": "^1.1.0"
   },
   "devDependencies": {

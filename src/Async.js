@@ -1,4 +1,5 @@
 import React, { Component, PropTypes } from 'react';
+import debounce from 'lodash.debounce';
 import Select from './Select';
 import stripDiacritics from './utils/stripDiacritics';
 
@@ -13,6 +14,7 @@ const propTypes = {
 		React.PropTypes.node
 	]),
 	loadOptions: React.PropTypes.func.isRequired,    // callback to load options asynchronously; (inputValue: string, callback: Function): ?Promise
+  delay: React.PropTypes.number,                   // wait time to debounce `loadOptions` callback
 	multi: React.PropTypes.bool,                     // multi-value input
 	options: PropTypes.array.isRequired,             // array of options
 	placeholder: React.PropTypes.oneOfType([         // field placeholder, displayed when there's no value (shared with Select)
@@ -43,6 +45,7 @@ const defaultProps = {
 	loadingPlaceholder: 'Loading...',
 	options: [],
 	searchPromptText: 'Type to search',
+  delay: 0,
 };
 
 export default class Async extends Component {
@@ -82,7 +85,7 @@ export default class Async extends Component {
 		this.setState({ options: [] });
 	}
 
-	loadOptions (inputValue) {
+  loadOptions = debounce(inputValue => {
 		const { loadOptions } = this.props;
 		const cache = this._cache;
 
@@ -135,7 +138,7 @@ export default class Async extends Component {
 		}
 
 		return inputValue;
-	}
+	}, this.props.delay)
 
 	_onInputChange (inputValue) {
 		const { ignoreAccents, ignoreCase, onInputChange } = this.props;
