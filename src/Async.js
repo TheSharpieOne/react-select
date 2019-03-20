@@ -1,5 +1,5 @@
 import React, { Component, PropTypes } from 'react';
-import debounce from 'lodash.debounce';
+import debounce from 'debounce';
 import Select from './Select';
 import stripDiacritics from './utils/stripDiacritics';
 
@@ -60,6 +60,8 @@ export default class Async extends Component {
 		};
 
 		this._onInputChange = this._onInputChange.bind(this);
+
+    this.loadOptions = debounce(this.loadOptions, this.props.delay);
 	}
 
 	componentDidMount () {
@@ -85,7 +87,7 @@ export default class Async extends Component {
 		this.setState({ options: [] });
 	}
 
-  loadOptions = debounce(inputValue => {
+  loadOptions(inputValue) {
 		const { loadOptions } = this.props;
 		const cache = this._cache;
 
@@ -138,7 +140,7 @@ export default class Async extends Component {
 		}
 
 		return inputValue;
-	}, this.props.delay)
+  }
 
 	_onInputChange (inputValue) {
 		const { ignoreAccents, ignoreCase, onInputChange } = this.props;
