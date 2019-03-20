@@ -22,10 +22,20 @@ var sinon = require('sinon');
 
 var Select = require('../src/Select');
 
+let clock;
+
 describe('Async', () => {
+	beforeEach(() => {
+		clock = sinon.useFakeTimers(0);
+	});
+
+	afterEach(() => {
+		clock.restore();
+	});
+
 	let asyncInstance, asyncNode, filterInputNode, loadOptions;
 
-	function createControl (props = {}) {
+	function createControl(props = {}) {
 		loadOptions = props.loadOptions || sinon.stub();
 		asyncInstance = TestUtils.renderIntoDocument(
 			<Select.Async
@@ -37,41 +47,45 @@ describe('Async', () => {
 		);
 		asyncNode = ReactDOM.findDOMNode(asyncInstance);
 		findAndFocusInputControl();
-	};
+	}
 
-	function createOptionsResponse (options) {
+	function createOptionsResponse(options) {
 		return {
-			options: options.map((option) => ({
+			options: options.map(option => ({
 				label: option,
 				value: option
 			}))
-	  };
+		};
 	}
 
-	function findAndFocusInputControl () {
+	function findAndFocusInputControl() {
 		filterInputNode = asyncNode.querySelector('input');
 		if (filterInputNode) {
 			TestUtils.Simulate.focus(filterInputNode);
 		}
-	};
+	}
 
-	function typeSearchText (text) {
+	function typeSearchText(text) {
 		TestUtils.Simulate.change(filterInputNode, { target: { value: text } });
-	};
+	}
 
 	describe('autoload', () => {
 		it('false does not call loadOptions on-mount', () => {
 			createControl({
 				autoload: false
 			});
-			expect(loadOptions, 'was not called');
+
+			clock.tick(1);
+			return expect(loadOptions, 'was not called');
 		});
 
 		it('true calls loadOptions on-mount', () => {
 			createControl({
 				autoload: true
 			});
-			expect(loadOptions, 'was called');
+
+			clock.tick(1);
+			return expect(loadOptions, 'was called');
 		});
 	});
 
@@ -79,14 +93,19 @@ describe('Async', () => {
 		it('should be used instead of loadOptions if input has been previously loaded', () => {
 			createControl();
 			typeSearchText('a');
+			clock.tick(1);
 			return expect(loadOptions, 'was called times', 1);
 			typeSearchText('b');
+			clock.tick(1);
 			return expect(loadOptions, 'was called times', 2);
 			typeSearchText('a');
+			clock.tick(1);
 			return expect(loadOptions, 'was called times', 2);
 			typeSearchText('b');
+			clock.tick(1);
 			return expect(loadOptions, 'was called times', 2);
 			typeSearchText('c');
+			clock.tick(1);
 			return expect(loadOptions, 'was called times', 3);
 		});
 
@@ -95,13 +114,17 @@ describe('Async', () => {
 				cache: false
 			});
 			typeSearchText('a');
+			clock.tick(1);
 			return expect(loadOptions, 'was called times', 1);
-			typeSearchText('b');
-			return expect(loadOptions, 'was called times', 2);
-			typeSearchText('a');
-			return expect(loadOptions, 'was called times', 3);
-			typeSearchText('b');
-			return expect(loadOptions, 'was called times', 4);
+      typeSearchText('b');
+      clock.tick(1);
+      return expect(loadOptions, 'was called times', 2);
+      typeSearchText('a');
+      clock.tick(1);
+      return expect(loadOptions, 'was called times', 3);
+      typeSearchText('b');
+      clock.tick(1);
+      return expect(loadOptions, 'was called times', 4);
 		});
 
 		it('can be customized', () => {
@@ -111,10 +134,13 @@ describe('Async', () => {
 				}
 			});
 			typeSearchText('a');
+			clock.tick(1);
 			return expect(loadOptions, 'was called times', 0);
 			typeSearchText('b');
+			clock.tick(1);
 			return expect(loadOptions, 'was called times', 1);
 			typeSearchText('a');
+			clock.tick(1);
 			return expect(loadOptions, 'was called times', 1);
 		});
 
@@ -130,57 +156,75 @@ describe('Async', () => {
 	describe('loadOptions', () => {
 		it('calls the loadOptions when search input text changes', () => {
 			createControl();
+      clock.tick(1);
 			typeSearchText('te');
+      clock.tick(1);
 			typeSearchText('tes');
+      clock.tick(1);
 			typeSearchText('te');
-			return expect(loadOptions, 'was called times', 3);
+			return expect(loadOptions, 'was called times', 2);
 		});
 
+    it('calls the loadOptions when search input text changes with delay prop', () => {
+      createControl({
+        delay: 250
+      });
+      typeSearchText('te');
+      clock.tick(1);
+      typeSearchText('tes');
+      clock.tick(300);
+      typeSearchText('test');
+      clock.tick(1);
+      typeSearchText('testi');
+      clock.tick(300);
+      typeSearchText('testin');
+      clock.tick(1);
+      typeSearchText('testing');
+      clock.tick(300);
+      return expect(loadOptions, 'was called times', 3);
+    });
+
 		it('shows the loadingPlaceholder text while options are being fetched', () => {
-			function loadOptions (input, callback) {}
+			function loadOptions(input, callback) {}
 			createControl({
 				loadOptions,
 				loadingPlaceholder: 'Loading'
 			});
 			typeSearchText('te');
+      clock.tick(1);
 			return expect(asyncNode.textContent, 'to contain', 'Loading');
 		});
 
 		describe('with callbacks', () => {
 			it('should display the loaded options', () => {
-				function loadOptions (input, resolve) {
+				function loadOptions(input, resolve) {
 					resolve(null, createOptionsResponse(['foo']));
 				}
 				createControl({
 					cache: false,
 					loadOptions
 				});
-				expect(asyncNode.querySelectorAll('[role=option]').length, 'to equal', 0);
+				expect(
+					asyncNode.querySelectorAll('[role=option]').length,
+					'to equal',
+					0
+				);
 				typeSearchText('foo');
-				expect(asyncNode.querySelectorAll('[role=option]').length, 'to equal', 1);
-				expect(asyncNode.querySelector('[role=option]').textContent, 'to equal', 'foo');
-			});
-
-			it('should display the most recently-requested loaded options (if results are returned out of order)', () => {
-				const callbacks = [];
-				function loadOptions (input, callback) {
-				  callbacks.push(callback);
-				}
-				createControl({
-					cache: false,
-					loadOptions
-				});
-				typeSearchText('foo');
-				typeSearchText('bar');
-				expect(asyncNode.querySelectorAll('[role=option]').length, 'to equal', 0);
-				callbacks[1](null, createOptionsResponse(['bar']));
-				callbacks[0](null, createOptionsResponse(['foo']));
-				expect(asyncNode.querySelectorAll('[role=option]').length, 'to equal', 1);
-				expect(asyncNode.querySelector('[role=option]').textContent, 'to equal', 'bar');
+        clock.tick(1);
+				expect(
+					asyncNode.querySelectorAll('[role=option]').length,
+					'to equal',
+					1
+				);
+				expect(
+					asyncNode.querySelector('[role=option]').textContent,
+					'to equal',
+					'foo'
+				);
 			});
 
 			it('should handle an error by setting options to an empty array', () => {
-				function loadOptions (input, resolve) {
+				function loadOptions(input, resolve) {
 					resolve(new Error('error'));
 				}
 				createControl({
@@ -188,16 +232,24 @@ describe('Async', () => {
 					loadOptions,
 					options: createOptionsResponse(['foo']).options
 				});
-				expect(asyncNode.querySelectorAll('[role=option]').length, 'to equal', 1);
+				expect(
+					asyncNode.querySelectorAll('[role=option]').length,
+					'to equal',
+					1
+				);
 				typeSearchText('bar');
-				expect(asyncNode.querySelectorAll('[role=option]').length, 'to equal', 0);
+				expect(
+					asyncNode.querySelectorAll('[role=option]').length,
+					'to equal',
+					0
+				);
 			});
 		});
 
 		describe('with promises', () => {
 			it('should display the loaded options', () => {
 				let promise;
-				function loadOptions (input) {
+				function loadOptions(input) {
 					promise = expect.promise((resolve, reject) => {
 						resolve(createOptionsResponse(['foo']));
 					});
@@ -208,11 +260,29 @@ describe('Async', () => {
 					cache: false,
 					loadOptions
 				});
-				expect(asyncNode.querySelectorAll('[role=option]').length, 'to equal', 0);
+				expect(
+					asyncNode.querySelectorAll('[role=option]').length,
+					'to equal',
+					0
+				);
 				typeSearchText('foo');
-				return expect.promise.all([promise])
-					.then(() => expect(asyncNode.querySelectorAll('[role=option]').length, 'to equal', 1))
-					.then(() => expect(asyncNode.querySelector('[role=option]').textContent, 'to equal', 'foo'));
+        clock.tick(1);
+				return expect.promise
+					.all([promise])
+					.then(() =>
+						expect(
+							asyncNode.querySelectorAll('[role=option]').length,
+							'to equal',
+							1
+						)
+					)
+					.then(() =>
+						expect(
+							asyncNode.querySelector('[role=option]').textContent,
+							'to equal',
+							'foo'
+						)
+					);
 			});
 
 			it('should display the most recently-requested loaded options (if results are returned out of order)', () => {
@@ -231,17 +301,35 @@ describe('Async', () => {
 				loadOptions.withArgs('bar').returns(promiseBar);
 				typeSearchText('foo');
 				typeSearchText('bar');
-				expect(asyncNode.querySelectorAll('[role=option]').length, 'to equal', 0);
+				expect(
+					asyncNode.querySelectorAll('[role=option]').length,
+					'to equal',
+					0
+				);
 				resolveBar(createOptionsResponse(['bar']));
 				resolveFoo(createOptionsResponse(['foo']));
-				return expect.promise.all([promiseFoo, promiseBar])
-					.then(() => expect(asyncNode.querySelectorAll('[role=option]').length, 'to equal', 1))
-					.then(() => expect(asyncNode.querySelector('[role=option]').textContent, 'to equal', 'bar'));
+        clock.tick(1);
+				return expect.promise
+					.all([promiseFoo, promiseBar])
+					.then(() =>
+						expect(
+							asyncNode.querySelectorAll('[role=option]').length,
+							'to equal',
+							1
+						)
+					)
+					.then(() =>
+						expect(
+							asyncNode.querySelector('[role=option]').textContent,
+							'to equal',
+							'bar'
+						)
+					);
 			});
 
 			it('should handle an error by setting options to an empty array', () => {
 				let promise, rejectPromise;
-				function loadOptions (input, resolve) {
+				function loadOptions(input, resolve) {
 					promise = expect.promise((resolve, reject) => {
 						rejectPromise = reject;
 					});
@@ -253,11 +341,23 @@ describe('Async', () => {
 					loadOptions,
 					options: createOptionsResponse(['foo']).options
 				});
-				expect(asyncNode.querySelectorAll('[role=option]').length, 'to equal', 1);
+				expect(
+					asyncNode.querySelectorAll('[role=option]').length,
+					'to equal',
+					1
+				);
 				typeSearchText('bar');
+        clock.tick(1);
 				rejectPromise(new Error('error'));
-				return expect.promise.all([promise])
-					.catch(() => expect(asyncNode.querySelectorAll('[role=option]').length, 'to equal', 0));
+				return expect.promise
+					.all([promise])
+					.catch(() =>
+						expect(
+							asyncNode.querySelectorAll('[role=option]').length,
+							'to equal',
+							0
+						)
+					);
 			});
 		});
 	});
@@ -269,6 +369,7 @@ describe('Async', () => {
 				ignoreCase: false
 			});
 			typeSearchText('TeSt');
+      clock.tick(1);
 			expect(loadOptions, 'was called with', 'TeSt');
 		});
 
@@ -278,6 +379,7 @@ describe('Async', () => {
 				ignoreCase: false
 			});
 			typeSearchText('Gedünstmaßig');
+      clock.tick(1);
 			// This should really be Gedunstmassig: ß -> ss
 			expect(loadOptions, 'was called with', 'Gedunstmasig');
 		});
@@ -288,6 +390,7 @@ describe('Async', () => {
 				ignoreCase: false
 			});
 			typeSearchText('Gedünstmaßig');
+      clock.tick(1);
 			expect(loadOptions, 'was called with', 'Gedünstmaßig');
 		});
 	});
@@ -299,6 +402,7 @@ describe('Async', () => {
 				ignoreCase: true
 			});
 			typeSearchText('TeSt');
+      clock.tick(1);
 			expect(loadOptions, 'was called with', 'test');
 		});
 
@@ -308,6 +412,7 @@ describe('Async', () => {
 				ignoreCase: true
 			});
 			typeSearchText('WÄRE');
+      clock.tick(1);
 			expect(loadOptions, 'was called with', 'wäre');
 		});
 
@@ -317,6 +422,7 @@ describe('Async', () => {
 				ignoreCase: false
 			});
 			typeSearchText('WÄRE');
+      clock.tick(1);
 			expect(loadOptions, 'was called with', 'WÄRE');
 		});
 	});
@@ -328,6 +434,7 @@ describe('Async', () => {
 				ignoreCase: true
 			});
 			typeSearchText('TeSt');
+      clock.tick(1);
 			expect(loadOptions, 'was called with', 'test');
 		});
 
@@ -337,17 +444,17 @@ describe('Async', () => {
 				ignoreCase: true
 			});
 			typeSearchText('WÄRE');
+      clock.tick(1);
 			expect(loadOptions, 'was called with', 'ware');
 		});
 	});
 
 	describe('noResultsText', () => {
-
 		beforeEach(() => {
 			createControl({
 				searchPromptText: 'searchPromptText',
 				loadingPlaceholder: 'loadingPlaceholder',
-				noResultsText: 'noResultsText',
+				noResultsText: 'noResultsText'
 			});
 		});
 
@@ -358,10 +465,13 @@ describe('Async', () => {
 		});
 
 		describe('while results are loading', () => {
-			beforeEach((cb) => {
-				asyncInstance.setState({
-					isLoading: true,
-				}, cb);
+			beforeEach(cb => {
+				asyncInstance.setState(
+					{
+						isLoading: true
+					},
+					cb
+				);
 			});
 			it('returns the loading indicator', () => {
 				asyncInstance.select = { state: { inputValue: 'asdf' } };
@@ -370,10 +480,13 @@ describe('Async', () => {
 		});
 
 		describe('after an empty result set loads', () => {
-			beforeEach((cb) => {
-				asyncInstance.setState({
-					isLoading: false,
-				}, cb);
+			beforeEach(cb => {
+				asyncInstance.setState(
+					{
+						isLoading: false
+					},
+					cb
+				);
 			});
 
 			describe('if noResultsText has been provided', () => {
@@ -384,15 +497,18 @@ describe('Async', () => {
 			});
 
 			describe('if noResultsText is empty', () => {
-				beforeEach((cb) => {
+				beforeEach(cb => {
 					createControl({
 						searchPromptText: 'searchPromptText',
 						loadingPlaceholder: 'loadingPlaceholder'
 					});
-					asyncInstance.setState({
-						isLoading: false,
-						inputValue: 'asdfkljhadsf'
-					}, cb);
+					asyncInstance.setState(
+						{
+							isLoading: false,
+							inputValue: 'asdfkljhadsf'
+						},
+						cb
+					);
 				});
 				it('falls back to searchPromptText', () => {
 					asyncInstance.select = { state: { inputValue: 'asdf' } };
@@ -407,14 +523,13 @@ describe('Async', () => {
 			let childProps;
 			createControl({
 				autoload: true,
-				children: (props) => {
+				children: props => {
 					childProps = props;
-					return (
-						<div>faux select</div>
-					);
+					return <div>faux select</div>;
 				}
 			});
 			expect(asyncNode.textContent, 'to equal', 'faux select');
+      clock.tick(1);
 			expect(childProps.isLoading, 'to equal', true);
 		});
 
@@ -428,7 +543,7 @@ describe('Async', () => {
 		it('should call onInputChange', () => {
 			const onInputChange = sinon.stub();
 			createControl({
-				onInputChange,
+				onInputChange
 			});
 			typeSearchText('a');
 			return expect(onInputChange, 'was called times', 1);
